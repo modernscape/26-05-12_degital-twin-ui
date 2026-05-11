@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react"
 import PhotoSwipeLightbox from "photoswipe/lightbox"
 import "photoswipe/style.css"
 
-export default function NuboardViewer() {
+export default function NuboardStep1() {
   const lightboxRef = useRef<PhotoSwipeLightbox | null>(null)
 
   useEffect(() => {
@@ -13,79 +13,66 @@ export default function NuboardViewer() {
       children: ".pswp-trigger",
       pswpModule: () => import("photoswipe"),
 
-      // 1. 写真アプリの挙動を再現
+      // 基本挙動
       initialZoomLevel: "fit",
-      secondaryZoomLevel: 2, // Wタップ時の倍率
+      secondaryZoomLevel: 2,
       maxZoomLevel: 4,
 
-      // 2. 余計なUIを排除（道具感を出す）
+      // UI非表示設定
       close: false,
       zoom: false,
       counter: false,
       arrowPrev: false,
       arrowNext: false,
-
-      // 3. iPhone Airの画面をフルに使う
-      padding: { top: 0, bottom: 0, left: 0, right: 0 },
       bgOpacity: 1,
     })
 
-    // 見開き2枚を1つの「スライド」として構築
+    // カスタムHTMLの描画
     lightboxRef.current.on("contentLoad", (e) => {
       const { content } = e
       if (content.type === "html") {
-        content.element = document.createElement("div")
-        content.element.className = "w-full h-full flex bg-[#1a1a1a]"
+        const wrapper = document.createElement("div")
+        wrapper.style.cssText =
+          "width:100%; height:100%; display:flex; background:#ffffff;" // 真っ白な板
 
-        // 左右2枚の画像を並べる（現在はプレースホルダー）
-        content.element.innerHTML = `
-          <div style="display: flex; width: 100%; height: 100%; background: #000;">
-            <div style="flex: 1; background: #fafafa; border-right: 1px solid #ddd; display: flex; align-items: center; justify-content: center;">
-              <span style="color: #999; font-family: monospace;">LEFT</span>
-            </div>
-            <div style="flex: 1; background: #fafafa; display: flex; align-items: center; justify-content: center;">
-              <span style="color: #999; font-family: monospace;">RIGHT</span>
-            </div>
+        wrapper.innerHTML = `
+          <div style="flex:1; border-right:4px solid #333; display:flex; align-items:center; justify-content:center;">
+            <h1 style="color:#000; font-size:64px; font-family:sans-serif;">LEFT</h1>
+          </div>
+          <div style="flex:1; display:flex; align-items:center; justify-content:center;">
+            <h1 style="color:#000; font-size:64px; font-family:sans-serif;">RIGHT</h1>
           </div>
         `
+        content.element = wrapper
       }
     })
 
     lightboxRef.current.init()
-
-    return () => {
-      lightboxRef.current?.destroy()
-      lightboxRef.current = null
-    }
+    return () => lightboxRef.current?.destroy()
   }, [])
 
   return (
-    <main className="fixed inset-0 bg-[#0a0a0a] flex items-center justify-center">
-      {/* PhotoSwipeのUI要素をCSSで強制的に消去・調整 */}
+    <main className="fixed inset-0 bg-[#333] flex items-center justify-center p-10">
       <style jsx global>{`
-        .pswp__button--close,
-        .pswp__button--zoom,
-        .pswp__counter {
+        /* PhotoSwipeのUI要素を徹底排除 */
+        .pswp__button,
+        .pswp__counter,
+        .pswp__preloader {
           display: none !important;
         }
         .pswp__bg {
-          background: #0a0a0a !important;
-        }
-        /* スクロールバー非表示 */
-        .pswp__html-container {
-          overflow: hidden !important;
+          background: #111 !important;
         }
       `}</style>
 
       <div id="nuboard-gallery">
         <button
-          className="pswp-trigger px-10 py-5 bg-white/5 border border-white/10 rounded-full text-white/50 font-light tracking-[0.3em] text-xs hover:bg-white/10 transition-all active:scale-95"
+          className="pswp-trigger px-20 py-10 bg-white text-black font-black text-2xl rounded-2xl shadow-2xl"
           data-pswp-type="html"
-          // ここが重要：2枚合わせたアスペクト比をiPhone Airに合わせる
           data-pswp-width="1800"
-          data-pswp-height="975"
+          data-pswp-height="950"
         >
-          ENTER VIEW
+          START VIEW
         </button>
       </div>
     </main>
