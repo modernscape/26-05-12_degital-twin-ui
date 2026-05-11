@@ -35,7 +35,7 @@ export default function PerfectBoard() {
       scale: nextZoomed ? SCALE_FACTOR : 1,
       transition: {
         type: "tween",
-        duration: 1.2, // ここを1.8にすれば、さらに超スローになります
+        duration: 0.8, // ここを1.8にすれば、さらに超スローになります
         ease: [0.22, 1, 0.36, 1], // iOSのズームに近い、心地よい減速感
       },
     })
