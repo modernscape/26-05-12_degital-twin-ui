@@ -80,11 +80,16 @@ function NuboardRow({
           href={leftImg}
           data-pswp-width="900"
           data-pswp-height="1200"
+          // 【重要】iOSのシステムメニューを徹底的に排除
           className="flex-1 bg-white/5 rounded-sm overflow-hidden border border-white/10 active:scale-[0.98] transition-transform touch-none"
-          onClick={(e) => e.preventDefault()} // hrefへの遷移を無効化
+          style={{ WebkitTouchCallout: "none" }}
+          onClick={(e) => e.preventDefault()}
           onPointerDown={() => startPress("left")}
-          onPointerUp={() => endPress(0)} // 本来は通し番号のインデックス
-          onContextMenu={(e) => e.preventDefault()}
+          onPointerUp={() => endPress(0)}
+          onContextMenu={(e) => {
+            e.preventDefault() // ここでシステムメニューをブロック
+            return false
+          }}
         >
           <img
             src={leftImg}
@@ -99,10 +104,14 @@ function NuboardRow({
           data-pswp-width="900"
           data-pswp-height="1200"
           className="flex-1 bg-white/5 rounded-sm overflow-hidden border border-white/10 active:scale-[0.98] transition-transform touch-none"
+          style={{ WebkitTouchCallout: "none" }}
           onClick={(e) => e.preventDefault()}
           onPointerDown={() => startPress("right")}
           onPointerUp={() => endPress(1)}
-          onContextMenu={(e) => e.preventDefault()}
+          onContextMenu={(e) => {
+            e.preventDefault()
+            return false
+          }}
         >
           <img
             src={rightImg}
