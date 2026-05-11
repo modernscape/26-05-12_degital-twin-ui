@@ -1,65 +1,111 @@
 "use client"
 
-import { motion, useAnimation } from "framer-motion"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
+import PhotoSwipeLightbox from "photoswipe/lightbox"
+import "photoswipe/style.css"
 
-export default function ZoomableBoard() {
-  const [isZoomed, setIsZoomed] = useState(false)
-  const controls = useAnimation()
+function NuboardRow({ label, lightbox }: { label: string; lightbox: any }) {
+  const [leftImg, setLeftImg] = useState("/img/left.jpg")
+  const [rightImg, setRightImg] = useState("/img/right.jpg")
 
-  // ダブルタップ時の処理
-  const handleDoubleTap = () => {
-    if (isZoomed) {
-      // 標準サイズに戻す
-      controls.start({
-        scale: 1,
-        transition: { type: "spring", stiffness: 300, damping: 30 },
-      })
-    } else {
-      // 1.5倍〜2倍に拡大する
-      controls.start({
-        scale: 1.8,
-        transition: { type: "spring", stiffness: 300, damping: 30 },
-      })
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
+  const isLongPress = useRef(false)
+
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    side: "left" | "right",
+  ) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      const url = URL.createObjectURL(file)
+      if (side === "left") setLeftImg(url)
+      else setRightImg(url)
     }
-    setIsZoomed(!isZoomed)
+  }
+
+  const startPress = (side: "left" | "right") => {
+    isLongPress.current = false
+    timerRef.current = setTimeout(() => {
+      isLongPress.current = true
+      // 物理的なクリックイベントを発火させる
+      const input = document.getElementById(
+        `${label}-${side}-input`,
+      ) as HTMLInputElement
+      input?.click()
+    }, 500) // 0.5秒に少し短縮
+  }
+
+  const endPress = (index: number) => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    // 長押しが確定していなければPhotoSwipeを開く
+    if (!isLongPress.current) {
+      lightbox.current?.loadAndOpen(index)
+    }
   }
 
   return (
-    <main className="fixed inset-0 bg-black overflow-hidden touch-none">
-      {/* 
-        スクロールとズームを両立させるためのコンテナ
-        isZoomed のときはスクロールを抑制（または自由移動）にする調整が可能
-      */}
-      <div
-        className={`h-full overflow-x-auto snap-x snap-mandatory hide-scrollbar ${isZoomed ? "overflow-hidden" : ""}`}
-        onDoubleClick={handleDoubleTap}
-      >
-        <motion.div
-          animate={controls}
-          initial={{ scale: 1 }}
-          className="flex h-full min-w-[200%] origin-center"
-        >
-          {/* 左ページ */}
-          <section className="w-screen h-full flex-shrink-0 snap-start bg-[#F9FAFB] border-r border-gray-200 relative flex items-center justify-center">
-            <div className="text-gray-300 font-mono">LEFT (GOAL)</div>
-            <div className="absolute right-0 w-8 h-full bg-gradient-to-l from-gray-200/30 to-transparent pointer-events-none" />
-          </section>
+    <div className="flex flex-col gap-2 w-full max-w-md select-none nuboard-group">
+      <span className="text-[10px] text-white/40 tracking-[0.2em] uppercase pl-1">
+        {label}
+      </span>
 
-          {/* 右ページ */}
-          <section className="w-screen h-full flex-shrink-0 snap-start bg-[#F9FAFB] relative flex items-center justify-center">
-            <div className="text-gray-300 font-mono">RIGHT (TASK)</div>
-            <div className="absolute left-0 w-8 h-full bg-gradient-to-r from-gray-200/30 to-transparent pointer-events-none" />
-          </section>
-        </motion.div>
-      </div>
-
-      {/* 操作ガイド（拡大中のみ表示） */}
-      {isZoomed && (
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-black/50 text-white px-4 py-1 rounded-full text-xs backdrop-blur-md">
-          Zoom Mode: Double Tap to Reset
+      <div className="flex gap-2 w-full aspect-[16/9]">
+        {/* 左ページ */}
+        <div className="relative flex-1">
+          <input
+            type="file"
+            accept="image/*"
+            id={`${label}-left-input`}
+            className="hidden"
+            onChange={(e) => handleFileChange(e, "left")}
+          />
+          <a
+            href={leftImg}
+            data-pswp-width="900"
+            data-pswp-height="1200"
+            className="block w-full h-full bg-white/5 rounded-sm overflow-hidden border border-white/10 active:scale-[0.98] transition-transform touch-none"
+            style={{ WebkitTouchCallout: "none" }}
+            onClick={(e) => e.preventDefault()}
+            onPointerDown={() => startPress("left")}
+            onPointerUp={() => endPress(0)}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <img
+              src={leftImg}
+              alt="Left"
+              className="w-full h-full object-cover pointer-events-none"
+            />
+          </a>
         </div>
-      )}
-    </main>
+
+        {/* 右ページ */}
+        <div className="relative flex-1">
+          <input
+            type="file"
+            accept="image/*"
+            id={`${label}-right-input`}
+            className="hidden"
+            onChange={(e) => handleFileChange(e, "right")}
+          />
+          <a
+            href={rightImg}
+            data-pswp-width="900"
+            data-pswp-height="1200"
+            className="block w-full h-full bg-white/5 rounded-sm overflow-hidden border border-white/10 active:scale-[0.98] transition-transform touch-none"
+            style={{ WebkitTouchCallout: "none" }}
+            onClick={(e) => e.preventDefault()}
+            onPointerDown={() => startPress("right")}
+            onPointerUp={() => endPress(1)}
+            onContextMenu={(e) => e.preventDefault()}
+          >
+            <img
+              src={rightImg}
+              alt="Right"
+              className="w-full h-full object-cover pointer-events-none"
+            />
+          </a>
+        </div>
+      </div>
+    </div>
   )
 }
