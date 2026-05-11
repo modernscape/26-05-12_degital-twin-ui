@@ -13,67 +13,51 @@ export default function NuboardStep1() {
       children: ".pswp-trigger",
       pswpModule: () => import("photoswipe"),
 
-      // 基本挙動
+      // 写真アプリの感触を定義
       initialZoomLevel: "fit",
-      secondaryZoomLevel: 2,
-      maxZoomLevel: 4,
+      secondaryZoomLevel: 2.5, // Wタップでガッツリ寄る
+      maxZoomLevel: 5,
 
-      // UI非表示設定
+      // 不要なUIを全カット
       close: false,
       zoom: false,
       counter: false,
       arrowPrev: false,
       arrowNext: false,
+      preloader: false,
       bgOpacity: 1,
     })
 
-    // カスタムHTMLの描画
-    lightboxRef.current.on("contentLoad", (e) => {
-      const { content } = e
-      if (content.type === "html") {
-        const wrapper = document.createElement("div")
-        wrapper.style.cssText =
-          "width:100%; height:100%; display:flex; background:#ffffff;" // 真っ白な板
-
-        wrapper.innerHTML = `
-          <div style="flex:1; border-right:4px solid #333; display:flex; align-items:center; justify-content:center;">
-            <h1 style="color:#000; font-size:64px; font-family:sans-serif;">LEFT</h1>
-          </div>
-          <div style="flex:1; display:flex; align-items:center; justify-content:center;">
-            <h1 style="color:#000; font-size:64px; font-family:sans-serif;">RIGHT</h1>
-          </div>
-        `
-        content.element = wrapper
-      }
-    })
-
     lightboxRef.current.init()
-    return () => lightboxRef.current?.destroy()
+
+    return () => {
+      lightboxRef.current?.destroy()
+      lightboxRef.current = null
+    }
   }, [])
 
   return (
-    <main className="fixed inset-0 bg-[#333] flex items-center justify-center p-10">
+    <main className="fixed inset-0 bg-[#111] flex items-center justify-center">
+      {/* 邪魔なUI（Xボタン等）を消すおまじない */}
       <style jsx global>{`
-        /* PhotoSwipeのUI要素を徹底排除 */
         .pswp__button,
-        .pswp__counter,
-        .pswp__preloader {
+        .pswp__counter {
           display: none !important;
         }
         .pswp__bg {
-          background: #111 !important;
+          background: #000 !important;
         }
       `}</style>
 
       <div id="nuboard-gallery">
-        <button
-          className="pswp-trigger px-20 py-10 bg-white text-black font-black text-2xl rounded-2xl shadow-2xl"
-          data-pswp-type="html"
+        <a
+          href="https://placehold.jp/24/ffffff/000000/1800x950.png?text=NUBOARD%20SPREAD%20VIEW"
+          className="pswp-trigger block px-12 py-6 bg-white text-black font-bold rounded-xl shadow-2xl active:scale-95 transition-transform"
           data-pswp-width="1800"
           data-pswp-height="950"
         >
-          START VIEW
-        </button>
+          ヌーボードを起動
+        </a>
       </div>
     </main>
   )
