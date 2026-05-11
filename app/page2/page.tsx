@@ -10,10 +10,10 @@ export default function NuboardStep2() {
   useEffect(() => {
     lightboxRef.current = new PhotoSwipeLightbox({
       gallery: "#nuboard-gallery",
-      children: ".pswp-trigger",
+      children: "a", // リンク要素をスライドとして認識
       pswpModule: () => import("photoswipe"),
 
-      // 物理演算の設定
+      // 写真アプリの挙動
       initialZoomLevel: "fit",
       secondaryZoomLevel: 2,
       maxZoomLevel: 4,
@@ -27,33 +27,16 @@ export default function NuboardStep2() {
       bgOpacity: 1,
     })
 
-    // 左右2枚を並べる「カスタムコンテンツ」の定義
-    lightboxRef.current.on("contentLoad", (e) => {
-      const { content } = e
-      if (content.type === "html") {
-        const container = document.createElement("div")
-        container.style.cssText =
-          "width:100%; height:100%; display:flex; background:#000;"
-
-        // 2枚の画像を50%ずつ配置（SwiftのUIStackViewのような構造）
-        container.innerHTML = `
-          <div style="flex: 1; height: 100%; overflow: hidden;">
-            <img src="/img/left.jpg" style="width: 100%; height: 100%; object-fit: contain;" />
-          </div>
-          <div style="flex: 1; height: 100%; overflow: hidden; border-left: 1px solid #222;">
-            <img src="/img/right.jpg" style="width: 100%; height: 100%; object-fit: contain;" />
-          </div>
-        `
-        content.element = container
-      }
-    })
-
     lightboxRef.current.init()
-    return () => lightboxRef.current?.destroy()
+
+    return () => {
+      lightboxRef.current?.destroy()
+      lightboxRef.current = null
+    }
   }, [])
 
   return (
-    <main className="fixed inset-0 bg-[#111] flex items-center justify-center">
+    <main className="fixed inset-0 bg-[#111] flex items-center justify-center p-10">
       <style jsx global>{`
         .pswp__button,
         .pswp__counter {
@@ -62,23 +45,46 @@ export default function NuboardStep2() {
         .pswp__bg {
           background: #000 !important;
         }
-        /* 余計なスクロールを抑制 */
-        .pswp__html-container {
-          overflow: hidden !important;
-        }
       `}</style>
 
-      <div id="nuboard-gallery">
-        <button
-          className="pswp-trigger px-12 py-6 bg-white text-black font-bold rounded-xl shadow-2xl active:scale-95 transition-transform"
-          data-pswp-type="html"
-          // 重要：2枚合わせたサイズ（例：縦長900x1200が2枚なら1800x1200）
-          data-pswp-width="1800"
+      {/* 
+          ここがポイント：
+          1つのギャラリー（#nuboard-gallery）の中に、
+          left.jpg と right.jpg を並べて配置します。
+      */}
+      <div id="nuboard-gallery" className="flex gap-4">
+        {/* 左ページ */}
+        <a
+          href="/img/left.jpg"
+          data-pswp-width="900"
           data-pswp-height="1200"
+          className="block w-32 h-48 bg-white/10 rounded overflow-hidden border border-white/20"
         >
-          見開きをチェック
-        </button>
+          <img
+            src="/img/left.jpg"
+            alt="Left"
+            className="w-full h-full object-cover"
+          />
+        </a>
+
+        {/* 右ページ */}
+        <a
+          href="/img/right.jpg"
+          data-pswp-width="900"
+          data-pswp-height="1200"
+          className="block w-32 h-48 bg-white/10 rounded overflow-hidden border border-white/20"
+        >
+          <img
+            src="/img/right.jpg"
+            alt="Right"
+            className="w-full h-full object-cover"
+          />
+        </a>
       </div>
+
+      <p className="fixed bottom-10 text-white/30 text-[10px] tracking-widest uppercase">
+        Tap a page to enter spread view
+      </p>
     </main>
   )
 }
