@@ -1,14 +1,16 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-// ... (PhotoSwipeのインポートはそのまま)
+import PhotoSwipeLightbox from "photoswipe/lightbox"
+import "photoswipe/style.css"
 
-export default function NuboardRow({
+// --- サブコンポーネント: 見開き1行分 ---
+function NuboardRow({
   label,
   lightbox,
 }: {
   label: string
-  lightbox: any
+  lightbox: React.MutableRefObject<PhotoSwipeLightbox | null>
 }) {
   const [leftImg, setLeftImg] = useState("/img/left.jpg")
   const [rightImg, setRightImg] = useState("/img/right.jpg")
@@ -33,11 +35,9 @@ export default function NuboardRow({
     pressStartTime.current = Date.now()
     isLongPressThresholdMet.current = false
 
-    // 視覚的なフィードバック（長押し中であることを示す）
+    // 長押し中であることを視覚的にフィードバック
     timerRef.current = setTimeout(() => {
       isLongPressThresholdMet.current = true
-      // ここで少しバイブレーションをさせると「道具感」が出ます
-      if (navigator.vibrate) navigator.vibrate(10)
     }, 500)
   }
 
@@ -46,14 +46,14 @@ export default function NuboardRow({
 
     const duration = Date.now() - pressStartTime.current
 
+    // iOS制限対策: 「指を離した瞬間」であればピッカー起動が許可される
     if (duration >= 500 || isLongPressThresholdMet.current) {
-      // 【重要】長押し確定後に指を離した「この瞬間」にクリック
       const input = document.getElementById(
         `${label}-${side}-input`,
       ) as HTMLInputElement
       input?.click()
     } else {
-      // 短いタップならPhotoSwipeを開く
+      // 短いタップならフルスクリーン表示
       lightbox.current?.loadAndOpen(index)
     }
   }
@@ -86,6 +86,7 @@ export default function NuboardRow({
             >
               <img
                 src={side === "left" ? leftImg : rightImg}
+                alt={side}
                 className="w-full h-full object-cover pointer-events-none"
               />
             </a>
@@ -93,5 +94,58 @@ export default function NuboardRow({
         ))}
       </div>
     </div>
+  )
+}
+
+// --- メインページコンポーネント (Vercelビルドエラー解決の export default) ---
+export default function NuboardPage() {
+  const lightbox = useRef<PhotoSwipeLightbox | null>(null)
+
+  useEffect(() => {
+    lightbox.current = new PhotoSwipeLightbox({
+      gallery: ".nuboard-group",
+      children: "a",
+      pswpModule: () => import("photoswipe"),
+      initialZoomLevel: "fit",
+      secondaryZoomLevel: 2,
+      maxZoomLevel: 4,
+      close: false,
+      zoom: false,
+      counter: false,
+      arrowPrev: false,
+      arrowNext: false,
+      bgOpacity: 1,
+    })
+    lightbox.current.init()
+
+    return () => {
+      lightbox.current?.destroy()
+      lightbox.current = null
+    }
+  }, [])
+
+  return (
+    <main className="min-h-screen bg-[#0a0a0a] flex flex-col items-center py-20 px-6 gap-12">
+      <style jsx global>{`
+        /* UIパーツを徹底排除 */
+        .pswp__button,
+        .pswp__counter {
+          display: none !important;
+        }
+        .pswp__bg {
+          background: #000 !important;
+        }
+      `}</style>
+
+      <NuboardRow label="Spread-01" lightbox={lightbox} />
+      <NuboardRow label="Spread-02" lightbox={lightbox} />
+      <NuboardRow label="Spread-03" lightbox={lightbox} />
+
+      <div className="text-center space-y-2 mt-4">
+        <p className="text-[10px] text-white/40 uppercase tracking-widest">
+          Tap to view / Long press to edit
+        </p>
+      </div>
+    </main>
   )
 }
