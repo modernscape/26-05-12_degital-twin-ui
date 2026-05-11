@@ -57,7 +57,7 @@ export default function DualPageView() {
   }, [])
 
   return (
-    <main className="fixed inset-0 bg-red overflow-hidden flex items-center justify-center">
+    <main className="fixed inset-0 bg-black overflow-hidden flex items-center justify-center">
       <div id="nuboard-gallery">
         {/* 
           PhotoSwipeに「これは画像じゃなくてHTMLだよ」と伝えるためのアイテム
