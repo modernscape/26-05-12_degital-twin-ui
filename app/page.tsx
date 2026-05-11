@@ -3,26 +3,56 @@
 import { useEffect, useRef, useState } from "react"
 import PhotoSwipeLightbox from "photoswipe/lightbox"
 import "photoswipe/style.css"
+import Dexie, { type Table } from "dexie"
 
-// --- サブコンポーネント: 見開き1行分 ---
-function NuboardRow({
-  label,
-  lightbox,
-}: {
-  label: string
-  lightbox: React.MutableRefObject<PhotoSwipeLightbox | null>
-}) {
+// --- DB定義 ---
+interface NuboardData {
+  id: string // "Spread-01-left" など
+  imageBlob: Blob
+}
+
+class NuboardDatabase extends Dexie {
+  photos!: Table<NuboardData>
+  constructor() {
+    super("NuboardDB")
+    this.version(1).stores({
+      photos: "id",
+    })
+  }
+}
+
+const db = new NuboardDatabase()
+
+// --- サブコンポーネント ---
+function NuboardRow({ label, lightbox }: { label: string; lightbox: any }) {
   const [leftImg, setLeftImg] = useState("/img/left.jpg")
   const [rightImg, setRightImg] = useState("/img/right.jpg")
   const leftInputRef = useRef<HTMLInputElement>(null)
   const rightInputRef = useRef<HTMLInputElement>(null)
 
-  const handleFileChange = (
+  // 初期読み込み：DBから画像を取得
+  useEffect(() => {
+    const loadImages = async () => {
+      const leftData = await db.photos.get(`${label}-left`)
+      const rightData = await db.photos.get(`${label}-right`)
+      if (leftData) setLeftImg(URL.createObjectURL(leftData.imageBlob))
+      if (rightData) setRightImg(URL.createObjectURL(rightData.imageBlob))
+    }
+    loadImages()
+  }, [label])
+
+  const handleFileChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
     side: "left" | "right",
   ) => {
     const file = e.target.files?.[0]
     if (file) {
+      // 1. DBに保存
+      await db.photos.put({
+        id: `${label}-${side}`,
+        imageBlob: file,
+      })
+      // 2. 表示を更新
       const url = URL.createObjectURL(file)
       if (side === "left") setLeftImg(url)
       else setRightImg(url)
@@ -39,8 +69,7 @@ function NuboardRow({
           { side: "left", img: leftImg, ref: leftInputRef, index: 0 },
           { side: "right", img: rightImg, ref: rightInputRef, index: 1 },
         ].map((item) => (
-          <div key={item.side} className="relative flex-1 group">
-            {/* 隠しインプット */}
+          <div key={item.side} className="relative flex-1">
             <input
               type="file"
               accept="image/*"
@@ -50,8 +79,6 @@ function NuboardRow({
                 handleFileChange(e, item.side as "left" | "right")
               }
             />
-
-            {/* メインの閲覧エリア（タップでPhotoSwipe） */}
             <a
               href={item.img}
               data-pswp-width="900"
@@ -59,7 +86,7 @@ function NuboardRow({
               className="block w-full h-full bg-white/5 rounded-sm overflow-hidden border border-white/10 active:opacity-80 transition-all"
               onClick={(e) => {
                 e.preventDefault()
-                lightbox.current?.loadAndOpen(item.index)
+                lightbox.current?.loadAndOpen(item.index === 0 ? 0 : 1) // 簡易化のため
               }}
             >
               <img
@@ -68,16 +95,13 @@ function NuboardRow({
                 alt={item.side}
               />
             </a>
-
-            {/* 左下の差し替えボタン（タップでピッカー起動） */}
             <button
               onClick={(e) => {
-                e.stopPropagation() // PhotoSwipeの起動を防ぐ
+                e.stopPropagation()
                 item.ref.current?.click()
               }}
               className="absolute bottom-2 left-2 w-8 h-8 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20 active:scale-90 transition-transform"
             >
-              {/* シンプルなカメラアイコン風のSVG */}
               <svg
                 width="14"
                 height="14"
@@ -99,7 +123,7 @@ function NuboardRow({
   )
 }
 
-// --- メインページコンポーネント ---
+// --- メインページ ---
 export default function NuboardPage() {
   const lightbox = useRef<PhotoSwipeLightbox | null>(null)
 
@@ -108,21 +132,12 @@ export default function NuboardPage() {
       gallery: ".nuboard-group",
       children: "a",
       pswpModule: () => import("photoswipe"),
-      initialZoomLevel: "fit",
-      secondaryZoomLevel: 2,
-      maxZoomLevel: 4,
-      close: false,
-      zoom: false,
-      counter: false,
-      arrowPrev: false,
-      arrowNext: false,
       bgOpacity: 1,
+      padding: { top: 20, bottom: 20, left: 20, right: 20 },
     })
     lightbox.current.init()
-
     return () => {
       lightbox.current?.destroy()
-      lightbox.current = null
     }
   }, [])
 
@@ -137,16 +152,9 @@ export default function NuboardPage() {
           background: #000 !important;
         }
       `}</style>
-
       <NuboardRow label="Spread-01" lightbox={lightbox} />
       <NuboardRow label="Spread-02" lightbox={lightbox} />
       <NuboardRow label="Spread-03" lightbox={lightbox} />
-
-      <div className="text-center mt-4">
-        <p className="text-[10px] text-white/30 uppercase tracking-[0.3em]">
-          Nuboard Archives
-        </p>
-      </div>
     </main>
   )
 }
