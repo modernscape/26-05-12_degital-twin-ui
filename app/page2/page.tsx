@@ -106,7 +106,7 @@ export default function PhotoAppStylePage() {
       ...animSettings,
       transition: {
         type: "spring",
-        duration: 0.8, // ここでお好みの長さに調整（1.2 くらいにするとかなり優雅です）
+        duration: 1.8, // ここでお好みの長さに調整（1.2 くらいにするとかなり優雅です）
         bounce: 0,
       },
     })
