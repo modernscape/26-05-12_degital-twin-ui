@@ -3,7 +3,13 @@
 import { useEffect, useRef, useState } from "react"
 // ... (PhotoSwipeのインポートはそのまま)
 
-function NuboardRow({ label, lightbox }: { label: string; lightbox: any }) {
+export default function NuboardRow({
+  label,
+  lightbox,
+}: {
+  label: string
+  lightbox: any
+}) {
   const [leftImg, setLeftImg] = useState("/img/left.jpg")
   const [rightImg, setRightImg] = useState("/img/right.jpg")
 
@@ -89,5 +95,3 @@ function NuboardRow({ label, lightbox }: { label: string; lightbox: any }) {
     </div>
   )
 }
-
-export default NuboardRow // これが必要
