@@ -87,19 +87,34 @@ export default function PhotoAppStylePage() {
 
   // 3. ダブルタップズーム
   const handleDoubleTap = (e: React.MouseEvent) => {
-    if (scale.get() > 1.1) {
-      controls.start({ scale: 1, x: 0, y: 0 })
-      scale.set(1)
-      setIsZoomed(false)
-    } else {
-      const rect = containerRef.current!.getBoundingClientRect()
-      const offsetX = (e.clientX - rect.left - rect.width / 2) * -1.5
-      const offsetY = (e.clientY - rect.top - rect.height / 2) * -1.5
-
-      controls.start({ scale: SCALE_FACTOR, x: offsetX, y: offsetY })
-      scale.set(SCALE_FACTOR)
-      setIsZoomed(true)
+    // transition を各プロパティに直接指定するか、スプリングに切り替える
+    const animSettings = {
+      scale: scale.get() > 1.1 ? 1 : SCALE_FACTOR,
+      x: 0,
+      y: 0,
     }
+
+    if (!(scale.get() > 1.1)) {
+      // 拡大時のみ、タップ位置に基づいた座標計算を入れる
+      const rect = containerRef.current!.getBoundingClientRect()
+      animSettings.x = (e.clientX - rect.left - rect.width / 2) * -1.5
+      animSettings.y = (e.clientY - rect.top - rect.height / 2) * -1.5
+    }
+
+    // アニメーション実行
+    controls.start({
+      ...animSettings,
+      transition: {
+        type: "spring",
+        duration: 0.8, // ここでお好みの長さに調整（1.2 くらいにするとかなり優雅です）
+        bounce: 0,
+      },
+    })
+
+    // 状態更新
+    const isNowZoomed = !(scale.get() > 1.1)
+    scale.set(animSettings.scale)
+    setIsZoomed(isNowZoomed)
   }
 
   useEffect(() => {
