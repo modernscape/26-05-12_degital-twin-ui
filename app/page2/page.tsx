@@ -1,6 +1,6 @@
 "use client"
 
-import { motion, useAnimation } from "framer-motion"
+import { motion, useAnimation, useMotionValue } from "framer-motion"
 import { useState, useRef, useEffect } from "react"
 
 export default function PhotoAppStylePage() {
@@ -15,22 +15,17 @@ export default function PhotoAppStylePage() {
   const containerRef = useRef<HTMLDivElement>(null)
   const boardRef = useRef<HTMLDivElement>(null)
 
-  // iPhone Airの比率を定義 (縦19.5 : 横9)
-  // 見開きなので 横は 9 * 2 = 18 になる
-  const ASPECT_RATIO = 18 / 19.5
-  const SCALE_FACTOR = 2.15 // 1ページが画面にフィットする倍率
+  const scale = useMotionValue(1)
+  const SCALE_FACTOR = 2.15
 
-  const updateConstraints = (zoomed: boolean) => {
-    if (!zoomed || !containerRef.current || !boardRef.current) {
-      setConstraints({ left: 0, right: 0, top: 0, bottom: 0 })
-      return
-    }
-
+  // 1. スクロール範囲の動的計算
+  const updateConstraints = (currentScale: number) => {
+    if (!containerRef.current || !boardRef.current) return
     const container = containerRef.current.getBoundingClientRect()
-    // 拡大後のボードサイズを計算
-    const zoomedWidth = container.width * 0.95 * SCALE_FACTOR
-    const zoomedHeight =
-      ((container.width * 0.95) / ASPECT_RATIO) * SCALE_FACTOR
+    const board = boardRef.current.getBoundingClientRect()
+
+    const zoomedWidth = container.width * 0.95 * currentScale
+    const zoomedHeight = ((container.width * 0.95) / (18 / 19.5)) * currentScale
 
     const overlapX = Math.max(0, (zoomedWidth - container.width) / 2)
     const overlapY = Math.max(0, (zoomedHeight - container.height) / 2)
@@ -43,19 +38,32 @@ export default function PhotoAppStylePage() {
     })
   }
 
-  const handleDoubleTap = () => {
-    if (isZoomed) {
+  // 2. ダブルタップで「タップした場所」へズーム
+  const handleDoubleTap = (e: React.MouseEvent) => {
+    if (scale.get() > 1.1) {
+      // 縮小
       controls.start({ scale: 1, x: 0, y: 0 })
+      scale.set(1)
       setIsZoomed(false)
     } else {
-      controls.start({ scale: SCALE_FACTOR })
+      // 拡大：タップした位置のオフセットを計算
+      const rect = containerRef.current!.getBoundingClientRect()
+      const offsetX = (e.clientX - rect.left - rect.width / 2) * -1.5
+      const offsetY = (e.clientY - rect.top - rect.height / 2) * -1.5
+
+      controls.start({ scale: SCALE_FACTOR, x: offsetX, y: offsetY })
+      scale.set(SCALE_FACTOR)
       setIsZoomed(true)
     }
   }
 
+  // 3. ピンチズーム（簡易実装版：拡大率の変化を監視）
   useEffect(() => {
-    updateConstraints(isZoomed)
-  }, [isZoomed])
+    const unsubscribe = scale.on("change", (latest) => {
+      updateConstraints(latest)
+    })
+    return () => unsubscribe()
+  }, [])
 
   return (
     <main className="fixed inset-0 bg-[#0a0a0a] overflow-hidden touch-none">
@@ -68,40 +76,34 @@ export default function PhotoAppStylePage() {
           ref={boardRef}
           drag={isZoomed}
           dragConstraints={constraints}
-          dragElastic={0.15}
+          dragElastic={0.1}
           dragMomentum={true}
           animate={controls}
-          initial={{ scale: 1 }}
-          style={{ aspectRatio: ASPECT_RATIO }}
-          className="relative w-[95vw] bg-white shadow-[0_20px_50px_rgba(0,0,0,0.5)] flex overflow-hidden origin-center"
+          style={{ scale }} // MotionValueでスケールを管理
+          className="relative w-[95vw] aspect-[18/19.5] bg-white shadow-[0_20px_60px_rgba(0,0,0,0.6)] flex overflow-hidden origin-center will-change-transform"
         >
-          {/* 左ページ：iPhone Air 1台分の比率 */}
-          <div className="flex-1 h-full border-r border-gray-200 bg-[#fdfdfd] flex items-center justify-center relative">
-            <span className="text-[8px] text-gray-300 font-mono rotate-90 opacity-50">
-              IPHONE AIR ASPECT (L)
+          {/* 左ページ */}
+          <div className="flex-1 h-full border-r border-gray-100 bg-[#fafafa] flex items-center justify-center relative">
+            <span className="text-[10px] text-gray-300 font-mono rotate-90 uppercase tracking-[0.2em] opacity-40">
+              Spread Left
             </span>
           </div>
 
-          {/* 右ページ：iPhone Air 1台分の比率 */}
-          <div className="flex-1 h-full bg-[#fdfdfd] flex items-center justify-center relative">
-            <span className="text-[8px] text-gray-300 font-mono rotate-90 opacity-50">
-              IPHONE AIR ASPECT (R)
+          {/* 右ページ */}
+          <div className="flex-1 h-full bg-[#fafafa] flex items-center justify-center relative">
+            <span className="text-[10px] text-gray-300 font-mono rotate-90 uppercase tracking-[0.2em] opacity-40">
+              Spread Right
             </span>
           </div>
 
-          {/* センターの溝（物理的な質感を少しだけ） */}
-          <div className="absolute left-1/2 top-0 bottom-0 w-[2px] bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
+          {/* センターの溝 */}
+          <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-gray-200" />
         </motion.div>
       </div>
 
-      {/* 下部のインジケーター（現在の位置確認用） */}
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-2 opacity-20">
-        <div
-          className={`w-1.5 h-1.5 rounded-full bg-white ${!isZoomed ? "opacity-100" : "opacity-30"}`}
-        />
-        <div
-          className={`w-1.5 h-1.5 rounded-full bg-white ${isZoomed ? "opacity-100" : "opacity-30"}`}
-        />
+      {/* モード表示 */}
+      <div className="absolute top-10 left-1/2 -translate-x-1/2 text-[10px] text-white/20 font-mono tracking-widest">
+        {isZoomed ? "DETAIL VIEW" : "PANORAMA VIEW"}
       </div>
     </main>
   )
