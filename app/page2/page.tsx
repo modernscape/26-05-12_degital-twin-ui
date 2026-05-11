@@ -1,127 +1,86 @@
 "use client"
 
-import { motion, useAnimation, useMotionValue } from "framer-motion"
-import { useState, useRef, useEffect } from "react"
+import { useEffect, useRef } from "react"
+import PhotoSwipeLightbox from "photoswipe/lightbox"
+import "photoswipe/style.css"
 
-export default function SnappingBoard() {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const controls = useAnimation()
+export default function NuboardViewer() {
+  const lightboxRef = useRef<PhotoSwipeLightbox | null>(null)
 
-  const scale = useMotionValue(1)
-  const x = useMotionValue(0)
-  const y = useMotionValue(0)
+  useEffect(() => {
+    // 1. ライトボックスの初期化
+    lightboxRef.current = new PhotoSwipeLightbox({
+      gallery: "#nuboard-gallery",
+      children: "a",
+      pswpModule: () => import("photoswipe"),
 
-  const [constraints, setConstraints] = useState({
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  })
+      // 写真アプリのような挙動にするためのチューニング
+      initialZoomLevel: "fit",
+      secondaryZoomLevel: 2.5, // ダブルタップ時の吸い付き倍率
+      maxZoomLevel: 5,
 
-  const SCALE_FACTOR = 2.5
+      // 余計なUIを削ぎ落として「道具」感を出す
+      zoom: true,
+      close: false,
+      counter: false,
+      arrowPrev: false,
+      arrowNext: false,
 
-  // エッジの制約を計算する関数
-  const updateConstraints = (currentScale: number) => {
-    if (!containerRef.current) return
-    const container = containerRef.current.getBoundingClientRect()
-
-    // ボードの基本サイズ（95vw）
-    const baseWidth = container.width * 0.95
-    const baseHeight = baseWidth / (18 / 19.5)
-
-    const zoomedWidth = baseWidth * currentScale
-    const zoomedHeight = baseHeight * currentScale
-
-    // 画面からはみ出した分だけ動けるようにする
-    const xRange = Math.max(0, (zoomedWidth - container.width) / 2)
-    const yRange = Math.max(0, (zoomedHeight - container.height) / 2)
-
-    setConstraints({
-      left: -xRange,
-      right: xRange,
-      top: -yRange,
-      bottom: yRange,
+      // iPhone Airの120Hzを活かす背景色
+      bgOpacity: 1,
+      padding: { top: 0, bottom: 0, left: 0, right: 0 },
     })
-  }
 
-  // 指を離した時やズーム終了時に「正しい位置」へ戻す
-  const snapToEdges = () => {
-    const currentScale = scale.get()
-    updateConstraints(currentScale)
+    lightboxRef.current.init()
 
-    // 現在の座標が制約を超えていないかチェック
-    let targetX = x.get()
-    let targetY = y.get()
+    // 2. ページを開いた瞬間に自動起動
+    const timer = setTimeout(() => {
+      const trigger = document.querySelector("#nuboard-trigger") as HTMLElement
+      trigger?.click()
+    }, 50)
 
-    if (currentScale <= 1.05) {
-      targetX = 0
-      targetY = 0
-    } else {
-      // 拡大時は、計算した constraints の範囲内に収める
-      targetX = Math.max(constraints.left, Math.min(constraints.right, targetX))
-      targetY = Math.max(constraints.top, Math.min(constraints.bottom, targetY))
+    return () => {
+      lightboxRef.current?.destroy()
+      lightboxRef.current = null
+      clearTimeout(timer)
     }
-
-    controls.start({
-      x: targetX,
-      y: targetY,
-      scale: currentScale,
-      transition: { type: "spring", stiffness: 200, damping: 25 },
-    })
-  }
-
-  const handleDoubleTap = (e: React.MouseEvent) => {
-    const isZoomingIn = scale.get() < 1.5
-    const targetScale = isZoomingIn ? SCALE_FACTOR : 1
-
-    let targetX = 0
-    let targetY = 0
-
-    if (isZoomingIn) {
-      const rect = containerRef.current!.getBoundingClientRect()
-      targetX = (e.clientX - rect.left - rect.width / 2) * -1.2
-      targetY = (e.clientY - rect.top - rect.height / 2) * -1.2
-    }
-
-    // じわっとアニメーションしつつ、終了時に値を同期
-    controls
-      .start({
-        scale: targetScale,
-        x: targetX,
-        y: targetY,
-        transition: { type: "tween", duration: 1.2, ease: [0.22, 1, 0.36, 1] },
-      })
-      .then(() => {
-        scale.set(targetScale)
-        x.set(targetX)
-        y.set(targetY)
-        updateConstraints(targetScale)
-      })
-  }
+  }, [])
 
   return (
-    <main
-      className="fixed inset-0 bg-[#0a0a0a] overflow-hidden touch-none"
-      ref={containerRef}
-    >
-      <div
-        className="w-full h-full flex items-center justify-center p-4"
-        onDoubleClick={handleDoubleTap}
-      >
-        <motion.div
-          drag
-          dragConstraints={constraints}
-          dragElastic={0.2} // 境界を超えた時のゴムのような遊び
-          dragMomentum={true}
-          onDragEnd={snapToEdges} // 指を離した時に吸着させる
-          animate={controls}
-          style={{ scale, x, y, aspectRatio: "18 / 19.5", width: "95vw" }}
-          className="relative bg-white shadow-2xl flex overflow-hidden origin-center will-change-transform cursor-grab active:cursor-grabbing"
+    <main className="fixed inset-0 bg-[#0a0a0a] flex items-center justify-center overflow-hidden">
+      {/* 
+        PhotoSwipeのトリガーとなる隠し要素
+        data-pswp-width/height は iPhone Air 2台分の比率 (1800x1950等) に設定 
+      */}
+      <div id="nuboard-gallery" className="hidden">
+        <a
+          id="nuboard-trigger"
+          href="https://images.unsplash.com/photo-1615412704911-55d5993f496d?auto=format&fit=crop&q=80&w=2000" // ここを撮影した画像に差し替える
+          data-pswp-width="1800"
+          data-pswp-height="1950"
+          target="_blank"
+          rel="noreferrer"
         >
-          <div className="flex-1 h-full border-r border-gray-100 bg-[#fafafa]" />
-          <div className="flex-1 h-full bg-[#fafafa]" />
-          <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-gray-200" />
-        </motion.div>
+          <img src="/placeholder.png" alt="Nuboard Spread" />
+        </a>
+      </div>
+
+      {/* ローディング中の表示 */}
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 border-2 border-white/10 border-t-white/80 rounded-full animate-spin" />
+        <span className="text-white/40 font-mono text-[10px] tracking-[0.2em]">
+          INITIALIZING CANVAS
+        </span>
+      </div>
+
+      {/* PhotoSwipeの上に重なるカスタムUI（ここにカメラボタンなどを配置） */}
+      <div className="fixed bottom-10 left-0 right-0 z-[10000] flex justify-center pointer-events-none">
+        <button
+          className="w-16 h-16 rounded-full border-4 border-white/20 bg-white/10 backdrop-blur-xl pointer-events-auto active:scale-95 transition-transform"
+          onClick={() => console.log("Camera trigger")}
+        >
+          <div className="w-10 h-10 m-auto rounded-full bg-white/80 shadow-[0_0_20px_rgba(255,255,255,0.4)]" />
+        </button>
       </div>
     </main>
   )
