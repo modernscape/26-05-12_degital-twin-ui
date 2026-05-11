@@ -1,68 +1,73 @@
 "use client"
 
 import { motion, useAnimation } from "framer-motion"
-import { useState } from "react"
+import { useState, useRef } from "react"
 
-export default function PanoramaZoomPage() {
-  const [zoomState, setZoomState] = useState<"out" | "left" | "right">("out")
+export default function PhotoAppStylePage() {
+  const [isZoomed, setIsZoomed] = useState(false)
   const controls = useAnimation()
+  const containerRef = useRef<HTMLDivElement>(null)
 
+  // ダブルタップで「等倍」と「2倍」を切り替える
   const handleDoubleTap = (e: React.MouseEvent) => {
-    // タップ位置が画面の左半分か右半分かを判定
-    const isClickOnLeft = e.clientX < window.innerWidth / 2
-
-    if (zoomState !== "out") {
-      // ズーム中なら元に戻す
+    if (isZoomed) {
+      // 縮小（全体表示）
       controls.start({
         scale: 1,
         x: 0,
-        transition: { type: "spring", bounce: 0, duration: 0.4 },
+        y: 0,
+        transition: { type: "spring", stiffness: 250, damping: 30 },
       })
-      setZoomState("out")
+      setIsZoomed(false)
     } else {
-      // 未ズームなら、タップした側に寄って拡大
-      const xOffset = isClickOnLeft ? "25%" : "-25%"
+      // 拡大（タップした付近へ寄る）
+      // ※簡易的に中央付近へ拡大。SwiftのScrollViewのようにタップ座標へ寄せることも可能
       controls.start({
-        scale: 2,
-        x: xOffset,
-        transition: { type: "spring", bounce: 0, duration: 0.4 },
+        scale: 2.5,
+        transition: { type: "spring", stiffness: 250, damping: 30 },
       })
-      setZoomState(isClickOnLeft ? "left" : "right")
+      setIsZoomed(true)
     }
   }
 
   return (
-    <main
-      className="fixed inset-0 bg-black overflow-hidden touch-none"
-      onDoubleClick={handleDoubleTap}
-    >
-      <motion.div
-        animate={controls}
-        initial={{ scale: 1 }}
-        className="w-[200vw] h-full flex"
+    <main className="fixed inset-0 bg-[#111] overflow-hidden touch-none">
+      <div
+        ref={containerRef}
+        className="w-full h-full flex items-center justify-center"
+        onDoubleClick={handleDoubleTap}
       >
-        {/* 左セクション */}
-        <div className="w-screen h-full bg-[#F9FAFB] border-r border-gray-300 flex items-center justify-center relative">
-          <span className="text-gray-300 font-mono tracking-widest">
-            LEFT (GOAL)
-          </span>
-          {/* 中央の綴じ目（影） */}
-          <div className="absolute right-0 top-0 bottom-0 w-10 bg-gradient-to-l from-gray-200/50 to-transparent" />
-        </div>
+        {/* 
+          一枚の長い「見開き」ボード
+          - drag: 拡大時のみ全方向にドラッグ可能にする
+          - dragConstraints: 画面外へ消え去らないように制限（数値は画像サイズに合わせて要調整）
+        */}
+        <motion.div
+          drag={isZoomed ? true : false}
+          dragConstraints={containerRef}
+          dragElastic={0.1}
+          dragMomentum={true} // SwiftのScrollViewのような慣性を有効化
+          animate={controls}
+          initial={{ scale: 1 }}
+          className="relative w-[90vw] aspect-[2/1] bg-white shadow-2xl flex items-center justify-center cursor-grab active:cursor-grabbing"
+        >
+          {/* 左半分 */}
+          <div className="flex-1 h-full border-r border-gray-100 flex items-center justify-center text-gray-300 font-mono text-xs">
+            LEFT SPREAD
+          </div>
+          {/* 右半分 */}
+          <div className="flex-1 h-full flex items-center justify-center text-gray-300 font-mono text-xs">
+            RIGHT SPREAD
+          </div>
 
-        {/* 右セクション */}
-        <div className="w-screen h-full bg-[#F9FAFB] flex items-center justify-center relative">
-          <span className="text-gray-300 font-mono tracking-widest">
-            RIGHT (TASK)
-          </span>
-          {/* 中央の綴じ目（影） */}
-          <div className="absolute left-0 top-0 bottom-0 w-10 bg-gradient-to-r from-gray-200/50 to-transparent" />
-        </div>
-      </motion.div>
+          {/* センターの綴じ目（Macのプレビューっぽく薄く入れる） */}
+          <div className="absolute left-1/2 top-0 bottom-0 w-[1px] bg-gray-200" />
+        </motion.div>
+      </div>
 
-      {/* ナビゲーションガイド */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 bg-white/10 backdrop-blur rounded-full text-[10px] text-white/50 uppercase tracking-tighter">
-        Double Tap to Zoom {zoomState !== "out" ? "Out" : "In"}
+      {/* ステータス表示 */}
+      <div className="absolute bottom-6 left-6 text-[10px] text-white/30 font-mono uppercase tracking-widest">
+        {isZoomed ? "Zoomed View" : "Full Canvas"}
       </div>
     </main>
   )
