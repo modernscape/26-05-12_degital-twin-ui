@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import PhotoSwipeLightbox from "photoswipe/lightbox"
 import "photoswipe/style.css"
 
+// サブコンポーネント（export default は付けない）
 function NuboardRow({ label, lightbox }: { label: string; lightbox: any }) {
   const [leftImg, setLeftImg] = useState("/img/left.jpg")
   const [rightImg, setRightImg] = useState("/img/right.jpg")
@@ -27,17 +28,15 @@ function NuboardRow({ label, lightbox }: { label: string; lightbox: any }) {
     isLongPress.current = false
     timerRef.current = setTimeout(() => {
       isLongPress.current = true
-      // 物理的なクリックイベントを発火させる
       const input = document.getElementById(
         `${label}-${side}-input`,
       ) as HTMLInputElement
       input?.click()
-    }, 500) // 0.5秒に少し短縮
+    }, 500)
   }
 
   const endPress = (index: number) => {
     if (timerRef.current) clearTimeout(timerRef.current)
-    // 長押しが確定していなければPhotoSwipeを開く
     if (!isLongPress.current) {
       lightbox.current?.loadAndOpen(index)
     }
@@ -48,9 +47,7 @@ function NuboardRow({ label, lightbox }: { label: string; lightbox: any }) {
       <span className="text-[10px] text-white/40 tracking-[0.2em] uppercase pl-1">
         {label}
       </span>
-
       <div className="flex gap-2 w-full aspect-[16/9]">
-        {/* 左ページ */}
         <div className="relative flex-1">
           <input
             type="file"
@@ -77,8 +74,6 @@ function NuboardRow({ label, lightbox }: { label: string; lightbox: any }) {
             />
           </a>
         </div>
-
-        {/* 右ページ */}
         <div className="relative flex-1">
           <input
             type="file"
@@ -110,4 +105,46 @@ function NuboardRow({ label, lightbox }: { label: string; lightbox: any }) {
   )
 }
 
-export default NuboardRow // これが必要
+// メインページ（必ず export default にする）
+export default function Page() {
+  const lightbox = useRef<PhotoSwipeLightbox | null>(null)
+
+  useEffect(() => {
+    lightbox.current = new PhotoSwipeLightbox({
+      gallery: ".nuboard-group",
+      children: "a",
+      pswpModule: () => import("photoswipe"),
+      initialZoomLevel: "fit",
+      secondaryZoomLevel: 2,
+      maxZoomLevel: 4,
+      close: false,
+      zoom: false,
+      counter: false,
+      arrowPrev: false,
+      arrowNext: false,
+      bgOpacity: 1,
+    })
+    lightbox.current.init()
+    return () => {
+      lightbox.current?.destroy()
+      lightbox.current = null
+    }
+  }, [])
+
+  return (
+    <main className="min-h-screen bg-[#0a0a0a] flex flex-col items-center py-20 px-6 gap-12">
+      <style jsx global>{`
+        .pswp__button,
+        .pswp__counter {
+          display: none !important;
+        }
+        .pswp__bg {
+          background: #000 !important;
+        }
+      `}</style>
+      <NuboardRow label="Spread-01" lightbox={lightbox} />
+      <NuboardRow label="Spread-02" lightbox={lightbox} />
+      <NuboardRow label="Spread-03" lightbox={lightbox} />
+    </main>
+  )
+}
