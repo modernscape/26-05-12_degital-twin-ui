@@ -13,19 +13,21 @@ export default function NuboardStep1() {
       children: ".pswp-trigger",
       pswpModule: () => import("photoswipe"),
 
-      // 写真アプリの感触を定義
+      // 写真アプリの感触
       initialZoomLevel: "fit",
-      secondaryZoomLevel: 2.5, // Wタップでガッツリ寄る
+      secondaryZoomLevel: 2.5,
       maxZoomLevel: 5,
 
-      // 不要なUIを全カット
+      // UI非表示 (TypeScriptが認めるプロパティのみ)
       close: false,
       zoom: false,
       counter: false,
       arrowPrev: false,
       arrowNext: false,
-      preloader: false,
       bgOpacity: 1,
+
+      // 予期せぬ動作を防ぐため、マウスホイールでのズームも有効化
+      wheelToZoom: true,
     })
 
     lightboxRef.current.init()
@@ -38,7 +40,7 @@ export default function NuboardStep1() {
 
   return (
     <main className="fixed inset-0 bg-[#111] flex items-center justify-center">
-      {/* 邪魔なUI（Xボタン等）を消すおまじない */}
+      {/* 物理的にUIを消去するスタイル */}
       <style jsx global>{`
         .pswp__button,
         .pswp__counter {
@@ -51,7 +53,7 @@ export default function NuboardStep1() {
 
       <div id="nuboard-gallery">
         <a
-          href="https://placehold.jp/24/ffffff/000000/1800x950.png?text=NUBOARD%20SPREAD%20VIEW"
+          href="https://placehold.jp/100/ffffff/000000/1800x950.png?text=NUBOARD"
           className="pswp-trigger block px-12 py-6 bg-white text-black font-bold rounded-xl shadow-2xl active:scale-95 transition-transform"
           data-pswp-width="1800"
           data-pswp-height="950"
