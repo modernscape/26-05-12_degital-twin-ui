@@ -48,7 +48,7 @@ export default function NuboardStep1() {
 
       <div id="nuboard-gallery">
         <a
-          href="/img/spread.jpg" // ここを指定の画像パスに変更
+          href="/app/img/spread.jpg" // ここを指定の画像パスに変更
           className="pswp-trigger block px-12 py-6 bg-white text-black font-bold rounded-xl shadow-2xl active:scale-95 transition-transform"
           data-pswp-width="1800"
           data-pswp-height="950"
