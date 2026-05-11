@@ -14,10 +14,8 @@ function NuboardRow({
 }) {
   const [leftImg, setLeftImg] = useState("/img/left.jpg")
   const [rightImg, setRightImg] = useState("/img/right.jpg")
-
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
-  const pressStartTime = useRef<number>(0)
-  const isLongPressThresholdMet = useRef(false)
+  const leftInputRef = useRef<HTMLInputElement>(null)
+  const rightInputRef = useRef<HTMLInputElement>(null)
 
   const handleFileChange = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -31,65 +29,69 @@ function NuboardRow({
     }
   }
 
-  const startPress = () => {
-    pressStartTime.current = Date.now()
-    isLongPressThresholdMet.current = false
-
-    // 長押し中であることを視覚的にフィードバック
-    timerRef.current = setTimeout(() => {
-      isLongPressThresholdMet.current = true
-    }, 500)
-  }
-
-  const endPress = (side: "left" | "right", index: number) => {
-    if (timerRef.current) clearTimeout(timerRef.current)
-
-    const duration = Date.now() - pressStartTime.current
-
-    // iOS制限対策: 「指を離した瞬間」であればピッカー起動が許可される
-    if (duration >= 500 || isLongPressThresholdMet.current) {
-      const input = document.getElementById(
-        `${label}-${side}-input`,
-      ) as HTMLInputElement
-      input?.click()
-    } else {
-      // 短いタップならフルスクリーン表示
-      lightbox.current?.loadAndOpen(index)
-    }
-  }
-
   return (
     <div className="flex flex-col gap-2 w-full max-w-md select-none nuboard-group">
       <span className="text-[10px] text-white/40 tracking-[0.2em] uppercase pl-1">
         {label}
       </span>
       <div className="flex gap-2 w-full aspect-[16/9]">
-        {["left", "right"].map((side, i) => (
-          <div key={side} className="relative flex-1">
+        {[
+          { side: "left", img: leftImg, ref: leftInputRef, index: 0 },
+          { side: "right", img: rightImg, ref: rightInputRef, index: 1 },
+        ].map((item) => (
+          <div key={item.side} className="relative flex-1 group">
+            {/* 隠しインプット */}
             <input
               type="file"
               accept="image/*"
-              id={`${label}-${side}-input`}
+              ref={item.ref}
               className="hidden"
-              onChange={(e) => handleFileChange(e, side as "left" | "right")}
+              onChange={(e) =>
+                handleFileChange(e, item.side as "left" | "right")
+              }
             />
+
+            {/* メインの閲覧エリア（タップでPhotoSwipe） */}
             <a
-              href={side === "left" ? leftImg : rightImg}
+              href={item.img}
               data-pswp-width="900"
               data-pswp-height="1200"
-              className="block w-full h-full bg-white/5 rounded-sm overflow-hidden border border-white/10 active:scale-95 active:opacity-60 transition-all touch-none"
-              style={{ WebkitTouchCallout: "none" }}
-              onClick={(e) => e.preventDefault()}
-              onPointerDown={startPress}
-              onPointerUp={() => endPress(side as "left" | "right", i)}
-              onContextMenu={(e) => e.preventDefault()}
+              className="block w-full h-full bg-white/5 rounded-sm overflow-hidden border border-white/10 active:opacity-80 transition-all"
+              onClick={(e) => {
+                e.preventDefault()
+                lightbox.current?.loadAndOpen(item.index)
+              }}
             >
               <img
-                src={side === "left" ? leftImg : rightImg}
-                alt={side}
-                className="w-full h-full object-cover pointer-events-none"
+                src={item.img}
+                className="w-full h-full object-cover"
+                alt={item.side}
               />
             </a>
+
+            {/* 左下の差し替えボタン（タップでピッカー起動） */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation() // PhotoSwipeの起動を防ぐ
+                item.ref.current?.click()
+              }}
+              className="absolute bottom-2 left-2 w-8 h-8 bg-black/60 backdrop-blur-md rounded-full flex items-center justify-center border border-white/20 active:scale-90 transition-transform"
+            >
+              {/* シンプルなカメラアイコン風のSVG */}
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="white"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+            </button>
           </div>
         ))}
       </div>
@@ -97,7 +99,7 @@ function NuboardRow({
   )
 }
 
-// --- メインページコンポーネント (Vercelビルドエラー解決の export default) ---
+// --- メインページコンポーネント ---
 export default function NuboardPage() {
   const lightbox = useRef<PhotoSwipeLightbox | null>(null)
 
@@ -127,7 +129,6 @@ export default function NuboardPage() {
   return (
     <main className="min-h-screen bg-[#0a0a0a] flex flex-col items-center py-20 px-6 gap-12">
       <style jsx global>{`
-        /* UIパーツを徹底排除 */
         .pswp__button,
         .pswp__counter {
           display: none !important;
@@ -141,9 +142,9 @@ export default function NuboardPage() {
       <NuboardRow label="Spread-02" lightbox={lightbox} />
       <NuboardRow label="Spread-03" lightbox={lightbox} />
 
-      <div className="text-center space-y-2 mt-4">
-        <p className="text-[10px] text-white/40 uppercase tracking-widest">
-          Tap to view / Long press to edit
+      <div className="text-center mt-4">
+        <p className="text-[10px] text-white/30 uppercase tracking-[0.3em]">
+          Nuboard Archives
         </p>
       </div>
     </main>
