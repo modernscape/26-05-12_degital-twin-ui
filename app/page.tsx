@@ -89,3 +89,5 @@ function NuboardRow({ label, lightbox }: { label: string; lightbox: any }) {
     </div>
   )
 }
+
+export default NuboardRow // これが必要
