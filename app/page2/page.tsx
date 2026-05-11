@@ -8,7 +8,7 @@ export default function SimpleZoomPage() {
   const containerRef = useRef<HTMLDivElement>(null)
 
   const SCALE_FACTOR = 2.5
-  const DURATION = "1.8s" // ここをいじるだけで確実に「じわ〜っ」とします
+  const DURATION = "1.0s" // ここをいじるだけで確実に「じわ〜っ」とします
 
   const handleDoubleTap = (e: React.MouseEvent) => {
     if (isZoomed) {
